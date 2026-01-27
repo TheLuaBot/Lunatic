@@ -55,5 +55,9 @@ dependencies {
 }
 ```
 
+## Why not use Crowdin?
+
+ - Crowdin is expensive for our projects. It would be, at least, 50 USD monthly! And that's too dang expensive for a tool like this.
+
 ## 📄 License
 Distributed under the GNU Affero General Public License v3.0. Copyright (c) 2026 TheLuaBot
