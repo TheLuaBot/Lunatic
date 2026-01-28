@@ -9,36 +9,40 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.yaml.snakeyaml.Yaml
 import java.io.File
 
 object LunaticEngine {
-
     val mapper = YAMLMapper().registerKotlinModule()
-
+    // Guardamos como Map<String, Any> para o Ktor conseguir converter para JSON
     private val locales = mutableMapOf<String, Any>()
 
-    fun loadLocales() {
-        val folder = File("locales")
-        if (!folder.exists()) {
-            println("[LUNATIC LOCALES SYSTEM]: A Pasta de Locales não existe. Irei criar uma imediatamente! :3")
-            folder.mkdirs()
-            println("[LUNATIC LOCALES SYSTEM]: Pasta Criada!")
-        }
 
-        val files = folder.listFiles { _, name -> name.endsWith(".yml") }
-        if (files.isNullOrEmpty()) {
-            println("Nada encontrado na pasta locales!")
+
+    fun loadLocales() {
+        val rootFolder = File("locales")
+        if (!rootFolder.exists() || !rootFolder.isDirectory) {
+            println("❌ Pasta 'locales' não encontrada!")
             return
         }
 
-        files.forEach { file ->
+        // Busca todos os arquivos .yml em qualquer subpasta
+        val yamlFiles = rootFolder.walkTopDown().filter { it.extension == "yml" || it.extension == "yaml" }.toList()
+
+        if (yamlFiles.isEmpty()) {
+            println("⚠️ Nenhum arquivo .yml encontrado nas subpastas de 'locales'!")
+            return
+        }
+
+        yamlFiles.forEach { file ->
+            // Pega o nome da pasta pai como o nome do idioma (ex: "br")
+            val lang = file.parentFile.name
             try {
-                val content = mapper.readValue(file, Map::class.java)
-                // Atribuindo o conteúdo lido ao mapa de locales
-                locales[file.nameWithoutExtension.lowercase()] = content
-                println("Sucesso: Locale [${file.nameWithoutExtension}] carregado.")
+                val content: Map<String, Any> = Yaml().load(file.inputStream())
+                locales[lang] = content
+                println("✅ Locale [$lang] carregado do arquivo: ${file.path}")
             } catch (e: Exception) {
-                println("Erro ao carregar ${file.name}: ${e.message}")
+                println("❌ Erro ao carregar $lang: ${e.message}")
             }
         }
     }
@@ -46,14 +50,19 @@ object LunaticEngine {
     fun get(lang: String) = locales[lang.lowercase()] ?: locales["br"]
 }
 
+
 fun main() {
-    // Inicia o motor da LunaticEngine
-    println("Iniciando LunaticEngine v1.0...")
+
+    // Inicia a LunaticEngine(Motor)
+    println("==================================")
+    println("🌙 Iniciando LunaticEngine v1.0...")
+    println("==================================")
     LunaticEngine.loadLocales()
+
+
 
     val port = System.getenv("PORT")?.toInt() ?: 8080
 
-    // === [ FRONTEND ] == //
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
         install(ContentNegotiation) {
             json()
